@@ -13,24 +13,24 @@ Das Projekt verwendet zwei Python-Skripte zur Datenaufbereitung:
 1. Datenbereinigung (clean_data.py)
 
 python
-# Bereinigt die Rohdaten und reduziert die Dateigröße
+# Bereinigt die Rohdaten und reduziert die Dateigrösse
 python clean_data.py
 Funktionen:
 
 Entfernt unnötige Felder
 Behält essentielle Unfallinformationen bei
 Verarbeitet Koordinaten (Location oder LV95)
-Reduziert Dateigröße um ~70%
-2. Straßennamen-Hinzufügung (add_streetnames.py)
+Reduziert Dateigrösse um ~70%
+2. Strassennamen-Hinzufügung (add_streetnames.py)
 
 python
-# Fügt Straßennamen mittels Geocoding hinzu
+# Fügt Strassennamen mittels Geocoding hinzu
 python add_streetnames.py
 Funktionen:
 
 Transformiert WGS84-Koordinaten zu LV95
-Matcht Unfälle mit dem Schweizer Straßennetz (SWISSTLM3D)
-Fügt Straßennamen innerhalb von 50m Distanz hinzu
+Matcht Unfälle mit dem Schweizer Strassennetz (SWISSTLM3D)
+Fügt Strassennamen innerhalb von 50m Distanz hinzu
 Verwendet Spatial Index für Performance
 Datenfluss:
 
@@ -52,7 +52,7 @@ bash
 # 1. Daten bereinigen
 python clean_data.py
 
-# 2. Straßennamen hinzufügen  
+# 2. Strassennamen hinzufügen  
 python add_streetnames.py
 2. Dashboard starten
 
@@ -72,8 +72,8 @@ zuerich-accident-analytics/
 ├── index.html                          # Haupt-Dashboard
 ├── unfaelle_mit_strassen.json          # Finale Unfalldaten (generiert)
 ├── clean_data.py                       # Datenbereinigung-Skript
-├── add_streetnames.py                  # Straßennamen-Skript
-├── SWISSTLM3D_2025.gpkg               # Schweizer Straßennetz (extern)
+├── add_streetnames.py                  # Strassennamen-Skript
+├── SWISSTLM3D_2025.gpkg               # Schweizer Strassennetz (extern)
 └── README.md
 🔧 Technische Details
 
@@ -102,7 +102,7 @@ json
 Koordinatensysteme
 
 Input: WGS84 (GPS) oder LV95 (Schweizer Landeskoordinaten)
-Processing: LV95 für Straßen-Matching
+Processing: LV95 für Strassen-Matching
 Output: WGS84 für Kartenvisualisierung
 Abhängigkeiten
 
@@ -116,35 +116,35 @@ Visualisierung
 🗺️ Interaktive Karte mit Unfall-Hotspots
 🔥 Heatmap für Unfallschwerpunkte
 📍 Clustering bei vielen Markern
-🛣️ Zürcher Straßennetz (optional)
+🛣️ Zürcher Strassennetz (optional)
 Filterung
 
 Gemeinde (nur Kanton Zürich)
-Straße (dank Straßennamen-Matching)
+Strasse (dank Strassennamen-Matching)
 Zeit (Jahr, Monat, Wochentag, Stunde)
 Unfalltyp und -schwere
 Analyse
 
 📊 Interaktive Diagramme mit Klick-Filterung
 📈 Trendanalyse über Jahre
-🔍 Top-Gemeinden und Straßen
+🔍 Top-Gemeinden und Strassen
 💾 CSV-Export der gefilterten Daten
 ⚠️ Wichtige Hinweise
 
 Datenqualität
 
 Nur Unfälle mit gültigen Koordinaten werden angezeigt
-Straßennamen werden nur bei Match innerhalb 50m zugewiesen
+Strassennamen werden nur bei Match innerhalb 50m zugewiesen
 LV95-Koordinaten werden automatisch zu WGS84 konvertiert
 Performance
 
-Spatial Index beschleunigt Straßen-Matching
+Spatial Index beschleunigt Strassen-Matching
 Bereinigte Daten reduzieren Ladezeit im Browser
 Cluster-Modus verbessert Performance bei vielen Markern
 Bekannte Einschränkungen
 
-Straßennamen-Matching erfordert SWISSTLM3D-Datenbank
-Nicht alle Unfälle haben exakte Straßenzuordnungen
+Strassennamen-Matching erfordert SWISSTLM3D-Datenbank
+Nicht alle Unfälle haben exakte Strassenzuordnungen
 Dashboard funktioniert nur mit korrekt vorbereiteten JSON-Daten
 🐛 Problembehebung
 
@@ -152,7 +152,7 @@ Häufige Fehler:
 
 "Keine Daten gefunden": JSON-Datei nicht korrekt vorbereitet
 "Koordinaten fehlen": Unfall ohne location/LV95-Koordinaten
-"Straßennamen nicht verfügbar": SWISSTLM3D nicht gefunden
+"Strassennamen nicht verfügbar": SWISSTLM3D nicht gefunden
 Lösungen:
 
 Datenvorbereitungsskripte in korrekter Reihenfolge ausführen

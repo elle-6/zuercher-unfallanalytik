@@ -1,65 +1,39 @@
 # Zürcher Unfallanalytik - Dashboard
-# 📋 Projektbeschreibung
+ 📋 Projektbeschreibung
 
-# Interaktives Dashboard zur Visualisierung und Analyse von Verkehrsunfällen im Kanton Zürich mit erweiterten Filter- und Analysemöglichkeiten.
+ Interaktives Dashboard zur Visualisierung und Analyse von Verkehrsunfällen im Kanton Zürich mit erweiterten Filter- und Analysemöglichkeiten.
 
 
 # 🚀 Schnellstart
-
-
-1. Datenvorbereitung
-
-
-# Rohdaten bereinigen
-python clean_data.py
-
-# Strassennamen hinzufügen
-python add_streetnames.py
-2. Dashboard starten
 
 # Lokalen Server starten
 python -m http.server 8000
 
 # Im Browser öffnen: http://localhost:8000
 
-
-
-3. Daten laden
-
-Dashboard öffnen
-unfaelle_mit_strassen.json hochladen
-Daten werden automatisch visualisiert
-
-##########################################################################################
+# Daten laden
+Im Dashboard auf "Daten importieren" klicken
+Datei unfaelle_mit_strassen.json auswählen
+Daten werden automatisch verarbeitet und visualisiert
 
 
 # Datenfluss:
 
-strassenverkehrsunfallorte.json
+strassenverkehrsunfallorte.json.  -> https://daten.sg.ch/explore/dataset/strassenverkehrsunfallorte/export/?flg=de-ch&disjunctive.accidenttype_de&disjunctive.accidentseveritycategory_de&disjunctive.roadtype_de&disjunctive.cantoncode&disjunctive.accidentyear&disjunctive.accidentmonth_de&disjunctive.accidentweekday_de&disjunctive.accidenthour&disjunctive.municipalitycode&disjunctive.gem_name&refine.cantoncode=ZH&location=16,47.25709,8.70353&basemap=jawg.streets
          ↓
+
 clean_data.py
          ↓
+
 strassenverkehrsunfallorte_cleaned.json  
          ↓
+
 add_streetnames.py
          ↓
+
 unfaelle_mit_strassen.json  ← Finale Datei für das Dashboard
 
 ##########################################################################################
-
-
-# 📁 Projektstruktur
-
-zuerich-accident-analytics/
-├── index.html                          # Haupt-Dashboard
-├── unfaelle_mit_strassen.json          # Finale Unfalldaten (generiert)
-├── clean_data.py                       # Datenbereinigung-Skript
-├── add_streetnames.py                  # Strassennamen-Skript
-├── SWISSTLM3D_2025.gpkg               # Schweizer Strassennetz (extern)
-└── README.md
-
-##########################################################################################
-
 
 # 🎯 Hauptfunktionen
 
@@ -67,10 +41,8 @@ zuerich-accident-analytics/
 📊 Echtzeit-Diagramme für Unfallanalysen
 🔍 Erweiterte Filterung nach Gemeinde, Strasse, Zeit, Unfalltyp
 💾 CSV-Export der gefilterten Daten
-⚙️ Technische Voraussetzungen
 
 ##########################################################################################
-
 
 # Python Abhängigkeiten
 pip install geopandas pandas pyproj shapely

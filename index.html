@@ -1,0 +1,1537 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Swiss Accident Analytics - Enhanced Dashboard</title>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 2000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header h1 {
+            font-size: 2.2em;
+            font-weight: 700;
+        }
+
+        .header-stats {
+            display: flex;
+            gap: 20px;
+            background: rgba(255,255,255,0.1);
+            padding: 15px 25px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+
+        .header-stat .number {
+            font-size: 1.8em;
+            font-weight: 700;
+            display: block;
+        }
+
+        .header-stat .label {
+            font-size: 0.8em;
+            opacity: 0.8;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 400px 1fr;
+            gap: 0;
+            height: calc(100vh - 180px);
+            min-height: 700px;
+        }
+
+        .sidebar {
+            background: #f8f9fa;
+            padding: 25px;
+            overflow-y: auto;
+            border-right: 1px solid #e0e0e0;
+        }
+
+        .map-section {
+            display: flex;
+            flex-direction: column;
+        }
+
+        #map {
+            flex: 1;
+            position: relative;
+        }
+
+        /* MAP CONTROLS */
+        .map-controls {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .control-button {
+            background: white;
+            border: 2px solid #667eea;
+            padding: 10px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .control-button:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        .control-button.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .dashboard-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        }
+
+        .dashboard-card h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.1em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .dashboard-card h3::after {
+            content: '👆 Klick=Filter | 🔄 Doppelklick=Reset';
+            font-size: 0.65em;
+            color: #999;
+            font-weight: normal;
+            margin-left: auto;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .dashboard-card:hover h3::after {
+            opacity: 1;
+        }
+
+        .chart-container {
+            height: 200px;
+            position: relative;
+        }
+
+        .filter-section {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            margin-bottom: 20px;
+        }
+
+        .filter-section h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.1em;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .filter-group {
+            margin-bottom: 15px;
+        }
+
+        .filter-group label {
+            display: block;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 6px;
+            font-size: 0.9em;
+        }
+
+        .filter-group select,
+        .filter-group input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 0.95em;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        .filter-group input:focus,
+        .filter-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .search-container {
+            position: relative;
+        }
+
+        .search-results {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 2px solid #667eea;
+            border-top: none;
+            border-radius: 0 0 8px 8px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
+        }
+
+        .search-result {
+            padding: 10px 12px;
+            cursor: pointer;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .search-result:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        .button-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        button {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.95em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            grid-column: 1 / -1;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #f8f9fa;
+            color: #667eea;
+            border: 2px solid #667eea;
+        }
+
+        .btn-secondary:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        .status-banner {
+            padding: 15px 20px;
+            margin: 20px;
+            border-radius: 10px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .status-loading {
+            background: #e3f2fd;
+            color: #1976d2;
+            border-left: 4px solid #1976d2;
+        }
+
+        .status-success {
+            background: #e8f5e9;
+            color: #2e7d32;
+            border-left: 4px solid #2e7d32;
+        }
+
+        .status-error {
+            background: #ffebee;
+            color: #c62828;
+            border-left: 4px solid #c62828;
+        }
+
+        .legend {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 2px solid white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 24px;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .toggle-slider {
+            background-color: #667eea;
+        }
+
+        input:checked + .toggle-slider:before {
+            transform: translateX(26px);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .stat-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 15px;
+            border-radius: 10px;
+            color: white;
+            text-align: center;
+        }
+
+        .stat-box .value {
+            font-size: 1.8em;
+            font-weight: 700;
+            display: block;
+        }
+
+        .stat-box .label {
+            font-size: 0.8em;
+            opacity: 0.9;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div>
+                <h1>🚨 Swiss Accident Analytics</h1>
+                <p>Enhanced Dashboard mit Strassenvisualisierung</p>
+            </div>
+            <div class="header-stats">
+                <div class="header-stat">
+                    <span class="number" id="headerTotal">0</span>
+                    <span class="label">Unfälle</span>
+                </div>
+                <div class="header-stat">
+                    <span class="number" id="headerSevere">0</span>
+                    <span class="label">Schwerverletzte</span>
+                </div>
+                <div class="header-stat">
+                    <span class="number" id="headerCantons">0</span>
+                    <span class="label">Kantone</span>
+                </div>
+            </div>
+        </div>
+
+        <div id="statusBanner"></div>
+
+        <div class="main-content">
+            <div class="sidebar">
+                <div class="filter-section">
+                    <h3><i class="fas fa-upload"></i> Daten importieren</h3>
+                    <div class="file-upload">
+                        <input type="file" id="jsonFile" accept=".json,.txt">
+                    </div>
+                </div>
+
+                <div class="filter-section">
+                    <h3><i class="fas fa-layer-group"></i> Karten-Layer</h3>
+                    
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <label>🛣️ Strassen anzeigen</label>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="streetsToggle" onchange="toggleStreets()">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <label>🔥 Heatmap-Modus</label>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="heatmapToggle" onchange="toggleHeatmap()">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <label>📍 Cluster-Modus</label>
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="clusterToggle" checked onchange="applyFilters()">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="filter-section">
+                    <h3><i class="fas fa-search-location"></i> Standort-Suche</h3>
+                    
+                    <div class="filter-group">
+                        <label>Kanton</label>
+                        <select id="kantonFilter">
+                            <option value="all">🇨🇭 Alle Kantone</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-group">
+                        <label>Gemeinde finden</label>
+                        <div class="search-container">
+                            <input type="text" id="gemeindeSearch" placeholder="Gemeindename eingeben...">
+                            <div class="search-results" id="gemeindeResults"></div>
+                        </div>
+                    </div>
+
+                    <div class="filter-group">
+                        <label>Strassenname finden</label>
+                        <div class="search-container">
+                            <input type="text" id="strasseSearch" placeholder="Strassenname eingeben...">
+                            <div class="search-results" id="strasseResults"></div>
+                        </div>
+                    </div>
+
+                    <div class="filter-group">
+                        <label>Jahr</label>
+                        <select id="jahrFilter">
+                            <option value="all">📅 Alle Jahre</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="filter-section">
+                    <h3><i class="fas fa-filter"></i> Unfall-Filter</h3>
+                    
+                    <div class="filter-group">
+                        <label>Unfallschwere</label>
+                        <select id="schwereFilter">
+                            <option value="all">Alle Schweregrade</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-group">
+                        <label>Unfalltyp</label>
+                        <select id="unfalltypFilter">
+                            <option value="all">Alle Unfalltypen</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-group">
+                        <label>Strassenart</label>
+                        <select id="strasseFilter">
+                            <option value="all">Alle Strassenarten</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="filter-section">
+                    <h3><i class="fas fa-clock"></i> Zeit-Filter</h3>
+
+                    <div class="filter-group">
+                        <label>Monat</label>
+                        <select id="monatFilter">
+                            <option value="all">Alle Monate</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-group">
+                        <label>Wochentag</label>
+                        <select id="wochentagFilter">
+                            <option value="all">Alle Wochentage</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-group">
+                        <label>Uhrzeit (Stunde)</label>
+                        <select id="uhrzeitFilter">
+                            <option value="all">Alle Uhrzeiten</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="button-group">
+                    <button class="btn-primary" onclick="loadJSONData()">
+                        <i class="fas fa-cloud-download-alt"></i> Daten laden
+                    </button>
+                    <button class="btn-secondary" onclick="applyFilters()">
+                        <i class="fas fa-search"></i> Filtern
+                    </button>
+                    <button class="btn-secondary" onclick="resetFilters()">
+                        <i class="fas fa-redo"></i> Reset
+                    </button>
+                    <button class="btn-secondary" onclick="exportCSV()">
+                        <i class="fas fa-download"></i> CSV Export
+                    </button>
+                </div>
+
+                <div class="stats-grid" id="quickStats"></div>
+            </div>
+
+            <div class="map-section">
+                <div id="map"></div>
+                
+                <div class="dashboard-grid">
+                    <div class="dashboard-card">
+                        <h3><i class="fas fa-chart-bar"></i> Top Gemeinden</h3>
+                        <div class="chart-container">
+                            <canvas id="gemeindeChart"></canvas>
+                        </div>
+                    </div>
+                    
+                    <div class="dashboard-card">
+                        <h3><i class="fas fa-calendar-alt"></i> Unfälle/Monat</h3>
+                        <div class="chart-container">
+                            <canvas id="monthChart"></canvas>
+                        </div>
+                    </div>
+                    
+                    <div class="dashboard-card">
+                        <h3><i class="fas fa-clock"></i> Unfälle/Uhrzeit</h3>
+                        <div class="chart-container">
+                            <canvas id="timeChart"></canvas>
+                        </div>
+                    </div>
+                    
+                    <div class="dashboard-card">
+                        <h3><i class="fas fa-car-crash"></i> Unfalltypen</h3>
+                        <div class="chart-container">
+                            <canvas id="typeChart"></canvas>
+                        </div>
+                    </div>
+                    
+                    <div class="dashboard-card">
+                        <h3><i class="fas fa-road"></i> Strassenarten</h3>
+                        <div class="chart-container">
+                            <canvas id="roadChart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="dashboard-card">
+                        <h3><i class="fas fa-chart-line"></i> Trend über Jahre</h3>
+                        <div class="chart-container">
+                            <canvas id="yearChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const map = L.map('map').setView([47.37, 8.54], 12);
+        L.tileLayer('https://wmts.geo.admin.ch/1.0.0/ch.swisstopo.pixelkarte-farbe/default/current/3857/{z}/{x}/{y}.jpeg', {
+            attribution: '© swisstopo'
+        }).addTo(map);
+
+        const legend = L.control({position: 'bottomright'});
+        legend.onAdd = function() {
+            const div = L.DomUtil.create('div', 'legend');
+            div.innerHTML = `
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #dc2626;"></div>
+                    <span>Schwerverletzte</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #ea580c;"></div>
+                    <span>Leichtverletzte</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #16a34a;"></div>
+                    <span>Unbeschädigte</span>
+                </div>
+            `;
+            return div;
+        };
+        legend.addTo(map);
+
+        let allAccidentData = [];
+        let filteredData = [];
+        let currentMarkers = [];
+        let streetLayer = null;
+        let heatmapLayer = null;
+        let markerCluster = null;
+        let gemeindeListe = new Map();
+        let strassenListe = new Map();
+
+        let gemeindeChart, monthChart, typeChart, roadChart, timeChart, yearChart;
+
+        // Doppelklick-Detector für Charts
+        let lastClickTime = 0;
+        let lastClickChart = null;
+        const DOUBLE_CLICK_DELAY = 300; // ms
+
+        function handleChartClick(chartName, items, resetCallback, filterCallback) {
+            const now = Date.now();
+            const timeSinceLastClick = now - lastClickTime;
+            
+            // Doppelklick erkannt
+            if (timeSinceLastClick < DOUBLE_CLICK_DELAY && lastClickChart === chartName) {
+                resetCallback();
+                lastClickTime = 0;
+                lastClickChart = null;
+                return;
+            }
+            
+            // Einzelklick
+            if (items.length > 0) {
+                filterCallback(items);
+            }
+            
+            lastClickTime = now;
+            lastClickChart = chartName;
+        }
+
+        function initCharts() {
+            // Gemeinde-Chart
+            gemeindeChart = new Chart(document.getElementById('gemeindeChart').getContext('2d'), {
+                type: 'bar',
+                data: { labels: [], datasets: [{ label: 'Unfälle', data: [], backgroundColor: '#667eea' }] },
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false, 
+                    plugins: { legend: { display: false } },
+                    onClick: (e, items) => {
+                        handleChartClick(
+                            'gemeinde',
+                            items,
+                            () => {
+                                document.getElementById('gemeindeSearch').value = '';
+                                applyFilters();
+                                showStatus('🔄 Gemeinde-Filter zurückgesetzt', 'success');
+                            },
+                            (items) => {
+                                const gemeinde = gemeindeChart.data.labels[items[0].index];
+                                document.getElementById('gemeindeSearch').value = gemeinde;
+                                applyFilters();
+                                showStatus(`✅ Gefiltert: ${gemeinde} | 🔄 Doppelklick zum Zurücksetzen`, 'success');
+                            }
+                        );
+                    }
+                }
+            });
+
+            // Monat-Chart
+            monthChart = new Chart(document.getElementById('monthChart').getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels: ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez'],
+                    datasets: [{ label: 'Unfälle', data: new Array(12).fill(0), borderColor: '#667eea', backgroundColor: 'rgba(102, 126, 234, 0.1)', tension: 0.3 }]
+                },
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false,
+                    onClick: (e, items) => {
+                        const monthNames = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
+                        handleChartClick(
+                            'monat',
+                            items,
+                            () => {
+                                document.getElementById('monatFilter').value = 'all';
+                                applyFilters();
+                                showStatus('🔄 Monats-Filter zurückgesetzt', 'success');
+                            },
+                            (items) => {
+                                const monat = monthNames[items[0].index];
+                                document.getElementById('monatFilter').value = monat;
+                                applyFilters();
+                                showStatus(`✅ Gefiltert: ${monat} | 🔄 Doppelklick zum Zurücksetzen`, 'success');
+                            }
+                        );
+                    }
+                }
+            });
+
+            // Zeit-Chart
+            timeChart = new Chart(document.getElementById('timeChart').getContext('2d'), {
+                type: 'bar',
+                data: {
+                    labels: Array.from({length: 24}, (_, i) => i + ':00'),
+                    datasets: [{ label: 'Unfälle', data: new Array(24).fill(0), backgroundColor: '#764ba2' }]
+                },
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false, 
+                    plugins: { legend: { display: false } },
+                    onClick: (e, items) => {
+                        handleChartClick(
+                            'uhrzeit',
+                            items,
+                            () => {
+                                document.getElementById('uhrzeitFilter').value = 'all';
+                                applyFilters();
+                                showStatus('🔄 Uhrzeit-Filter zurückgesetzt', 'success');
+                            },
+                            (items) => {
+                                const hour = items[0].index;
+                                document.getElementById('uhrzeitFilter').value = hour;
+                                applyFilters();
+                                showStatus(`✅ Gefiltert: ${hour}:00 Uhr | 🔄 Doppelklick zum Zurücksetzen`, 'success');
+                            }
+                        );
+                    }
+                }
+            });
+
+            // Typ-Chart
+            typeChart = new Chart(document.getElementById('typeChart').getContext('2d'), {
+                type: 'doughnut',
+                data: { labels: [], datasets: [{ data: [], backgroundColor: ['#667eea', '#764ba2', '#ec4899', '#f59e0b', '#10b981'] }] },
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false,
+                    onClick: (e, items) => {
+                        handleChartClick(
+                            'typ',
+                            items,
+                            () => {
+                                document.getElementById('unfalltypFilter').value = 'all';
+                                applyFilters();
+                                showStatus('🔄 Unfalltyp-Filter zurückgesetzt', 'success');
+                            },
+                            (items) => {
+                                const typ = typeChart.data.labels[items[0].index];
+                                document.getElementById('unfalltypFilter').value = typ;
+                                applyFilters();
+                                showStatus(`✅ Gefiltert: ${typ} | 🔄 Doppelklick zum Zurücksetzen`, 'success');
+                            }
+                        );
+                    }
+                }
+            });
+
+            // Road-Chart (WICHTIG!)
+            roadChart = new Chart(document.getElementById('roadChart').getContext('2d'), {
+                type: 'pie',
+                data: { labels: [], datasets: [{ data: [], backgroundColor: ['#667eea', '#764ba2', '#ec4899', '#f59e0b', '#10b981'] }] },
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false,
+                    onClick: (e, items) => {
+                        handleChartClick(
+                            'strasse',
+                            items,
+                            () => {
+                                document.getElementById('strasseFilter').value = 'all';
+                                applyFilters();
+                                showStatus('🔄 Strassenart-Filter zurückgesetzt', 'success');
+                            },
+                            (items) => {
+                                const strasse = roadChart.data.labels[items[0].index];
+                                document.getElementById('strasseFilter').value = strasse;
+                                applyFilters();
+                                showStatus(`✅ Gefiltert: ${strasse} | 🔄 Doppelklick zum Zurücksetzen`, 'success');
+                            }
+                        );
+                    }
+                }
+            });
+
+            // Jahr-Chart
+            yearChart = new Chart(document.getElementById('yearChart').getContext('2d'), {
+                type: 'line',
+                data: { labels: [], datasets: [{ label: 'Unfälle', data: [], borderColor: '#667eea', backgroundColor: 'rgba(102, 126, 234, 0.1)', tension: 0.3 }] },
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false,
+                    onClick: (e, items) => {
+                        handleChartClick(
+                            'jahr',
+                            items,
+                            () => {
+                                document.getElementById('jahrFilter').value = 'all';
+                                applyFilters();
+                                showStatus('🔄 Jahres-Filter zurückgesetzt', 'success');
+                            },
+                            (items) => {
+                                const jahr = yearChart.data.labels[items[0].index];
+                                document.getElementById('jahrFilter').value = jahr;
+                                applyFilters();
+                                showStatus(`✅ Gefiltert: Jahr ${jahr} | 🔄 Doppelklick zum Zurücksetzen`, 'success');
+                            }
+                        );
+                    }
+                }
+            });
+        }
+
+        function showStatus(message, type) {
+            const banner = document.getElementById('statusBanner');
+            banner.innerHTML = `<div class="status-banner status-${type}"><span>${message}</span></div>`;
+        }
+
+        function loadJSONData() {
+            const fileInput = document.getElementById('jsonFile');
+            
+            if (fileInput.files.length === 0) {
+                showStatus('❌ Bitte wählen Sie eine JSON-Datei aus', 'error');
+                return;
+            }
+
+            const file = fileInput.files[0];
+            showStatus(`Lade JSON-Datei (${(file.size / 1024 / 1024).toFixed(1)} MB)...`, 'loading');
+
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                try {
+                    const jsonData = JSON.parse(e.target.result);
+                    
+                    if (!Array.isArray(jsonData)) {
+                        showStatus('❌ JSON-Daten müssen ein Array sein', 'error');
+                        return;
+                    }
+
+                    allAccidentData = jsonData;
+                    showStatus(`✅ ${allAccidentData.length.toLocaleString()} Unfälle geladen`, 'success');
+                    populateFilters();
+                    buildGemeindeListe();
+                    buildStrassenListe();
+                    displayData(allAccidentData);
+                    updateCharts(allAccidentData);
+
+                } catch (error) {
+                    showStatus(`❌ Fehler: ${error.message}`, 'error');
+                }
+            };
+            
+            reader.readAsText(file);
+        }
+
+        function buildGemeindeListe() {
+            gemeindeListe.clear();
+            allAccidentData.forEach(acc => {
+                if (acc.gem_name && acc.municipalitycode) {
+                    gemeindeListe.set(acc.municipalitycode, acc.gem_name);
+                }
+            });
+            
+            setupAutocomplete('gemeindeSearch', 'gemeindeResults', gemeindeListe);
+        }
+
+        function buildStrassenListe() {
+            strassenListe.clear();
+            allAccidentData.forEach(acc => {
+                if (acc.strassenname) {
+                    strassenListe.set(acc.strassenname, acc.strassenname);
+                }
+            });
+            
+            setupAutocomplete('strasseSearch', 'strasseResults', strassenListe);
+        }
+
+        function setupAutocomplete(inputId, resultsId, dataMap) {
+            const input = document.getElementById(inputId);
+            const results = document.getElementById(resultsId);
+            
+            input.addEventListener('input', function() {
+                const searchTerm = this.value.toLowerCase();
+                
+                // Priorisiere exakte Übereinstimmungen und "Startet mit"
+                const exactMatches = [];
+                const startsWithMatches = [];
+                const containsMatches = [];
+                
+                Array.from(dataMap.values()).forEach(val => {
+                    const valLower = val.toLowerCase();
+                    if (valLower === searchTerm) {
+                        exactMatches.push(val);
+                    } else if (valLower.startsWith(searchTerm)) {
+                        startsWithMatches.push(val);
+                    } else if (valLower.includes(searchTerm)) {
+                        containsMatches.push(val);
+                    }
+                });
+                
+                const matches = [...exactMatches, ...startsWithMatches, ...containsMatches].slice(0, 10);
+                
+                results.innerHTML = '';
+                matches.forEach(match => {
+                    const div = document.createElement('div');
+                    div.className = 'search-result';
+                    div.textContent = match;
+                    div.onclick = () => {
+                        input.value = match;
+                        results.style.display = 'none';
+                        applyFilters();
+                    };
+                    results.appendChild(div);
+                });
+                
+                results.style.display = matches.length > 0 ? 'block' : 'none';
+            });
+
+            // ESC-Taste zum Schliessen
+            input.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    results.style.display = 'none';
+                    input.blur(); // Fokus entfernen
+                }
+            });
+
+            // Click outside zum Schliessen
+            document.addEventListener('click', function(e) {
+                if (!input.contains(e.target) && !results.contains(e.target)) {
+                    results.style.display = 'none';
+                }
+            });
+
+            // Tab-Taste zum Schliessen
+            input.addEventListener('blur', function(e) {
+                // Verzögerung damit Click auf Result noch funktioniert
+                setTimeout(() => {
+                    if (!results.contains(document.activeElement)) {
+                        results.style.display = 'none';
+                    }
+                }, 200);
+            });
+        }
+
+        function populateFilters() {
+            const values = {
+                kantone: new Set(),
+                jahre: new Set(),
+                unfalltypen: new Set(),
+                schweregrade: new Set(),
+                strassenarten: new Set(),
+                monate: new Set(),
+                wochentage: new Set(),
+                uhrzeiten: new Set()
+            };
+
+            allAccidentData.forEach(acc => {
+                if (acc.cantoncode) values.kantone.add(acc.cantoncode);
+                if (acc.accidentyear) values.jahre.add(acc.accidentyear);
+                if (acc.accidenttype_de) values.unfalltypen.add(acc.accidenttype_de);
+                if (acc.accidentseveritycategory_de) values.schweregrade.add(acc.accidentseveritycategory_de);
+                if (acc.roadtype_de) values.strassenarten.add(acc.roadtype_de);
+                if (acc.accidentmonth_de) values.monate.add(acc.accidentmonth_de);
+                if (acc.accidentweekday_de) values.wochentage.add(acc.accidentweekday_de);
+                if (acc.accidenthour) values.uhrzeiten.add(acc.accidenthour);
+            });
+
+            populateSelect('kantonFilter', values.kantone, '🇨🇭 Alle Kantone');
+            populateSelect('jahrFilter', values.jahre, '📅 Alle Jahre', true);
+            populateSelect('unfalltypFilter', values.unfalltypen, 'Alle Unfalltypen');
+            populateSelect('schwereFilter', values.schweregrade, 'Alle Schweregrade');
+            populateSelect('strasseFilter', values.strassenarten, 'Alle Strassenarten');
+            populateSelect('monatFilter', values.monate, 'Alle Monate');
+            populateSelect('wochentagFilter', values.wochentage, 'Alle Wochentage');
+            populateSelect('uhrzeitFilter', values.uhrzeiten, 'Alle Uhrzeiten', true);
+        }
+
+        function populateSelect(id, values, defaultText, sortNumeric = false) {
+            const select = document.getElementById(id);
+            select.innerHTML = `<option value="all">${defaultText}</option>`;
+            
+            const sorted = sortNumeric 
+                ? Array.from(values).sort((a, b) => b - a)
+                : Array.from(values).sort();
+            
+            sorted.forEach(value => {
+                const option = document.createElement('option');
+                option.value = value;
+                option.textContent = value;
+                select.appendChild(option);
+            });
+        }
+
+        function applyFilters() {
+            if (allAccidentData.length === 0) {
+                showStatus('⚠️ Bitte laden Sie zuerst die Daten', 'error');
+                return;
+            }
+
+            const filters = {
+                kanton: document.getElementById('kantonFilter').value,
+                gemeinde: document.getElementById('gemeindeSearch').value.trim(),
+                strasse: document.getElementById('strasseSearch').value.trim(),
+                jahr: document.getElementById('jahrFilter').value,
+                unfalltyp: document.getElementById('unfalltypFilter').value,
+                schwere: document.getElementById('schwereFilter').value,
+                strassenart: document.getElementById('strasseFilter').value,
+                monat: document.getElementById('monatFilter').value,
+                wochentag: document.getElementById('wochentagFilter').value,
+                uhrzeit: document.getElementById('uhrzeitFilter').value
+            };
+
+            console.log('🔍 Angewandte Filter:', filters); // Debug
+
+            showStatus('Filter werden angewendet...', 'loading');
+
+            setTimeout(() => {
+                filteredData = allAccidentData.filter(acc => {
+                    // Kanton-Filter
+                    if (filters.kanton !== 'all' && acc.cantoncode !== filters.kanton) {
+                        return false;
+                    }
+                    
+                    // Gemeinde-Filter (exakte Übereinstimmung wenn gesetzt)
+                    if (filters.gemeinde && acc.gem_name?.toLowerCase() !== filters.gemeinde.toLowerCase()) {
+                        return false;
+                    }
+                    
+                    // Strassenname-Filter (exakte Übereinstimmung wenn gesetzt)
+                    if (filters.strasse && acc.strassenname?.toLowerCase() !== filters.strasse.toLowerCase()) {
+                        return false;
+                    }
+                    
+                    // Jahr-Filter
+                    if (filters.jahr !== 'all' && acc.accidentyear != filters.jahr) {
+                        return false;
+                    }
+                    
+                    // Unfalltyp-Filter
+                    if (filters.unfalltyp !== 'all' && acc.accidenttype_de !== filters.unfalltyp) {
+                        return false;
+                    }
+                    
+                    // Schweregrad-Filter
+                    if (filters.schwere !== 'all' && acc.accidentseveritycategory_de !== filters.schwere) {
+                        return false;
+                    }
+                    
+                    // Strassenart-Filter (roadtype_de)
+                    if (filters.strassenart !== 'all' && acc.roadtype_de !== filters.strassenart) {
+                        return false;
+                    }
+                    
+                    // Monat-Filter
+                    if (filters.monat !== 'all' && acc.accidentmonth_de !== filters.monat) {
+                        return false;
+                    }
+                    
+                    // Wochentag-Filter
+                    if (filters.wochentag !== 'all' && acc.accidentweekday_de !== filters.wochentag) {
+                        return false;
+                    }
+                    
+                    // Uhrzeit-Filter
+                    if (filters.uhrzeit !== 'all' && acc.accidenthour != filters.uhrzeit) {
+                        return false;
+                    }
+                    
+                    return true;
+                });
+
+                console.log(`✅ Gefiltert: ${filteredData.length} von ${allAccidentData.length} Unfällen`); // Debug
+
+                displayData(filteredData);
+                updateCharts(filteredData);
+                
+                showStatus(`✅ ${filteredData.length.toLocaleString()} Unfälle gefunden`, 'success');
+            }, 100);
+        }
+
+        function displayData(data) {
+            // Zuerst ALLES von der Karte entfernen
+            clearMap();
+            
+            if (data.length === 0) {
+                showStatus('❌ Keine Unfälle gefunden', 'error');
+                updateStats(0, 0, 0);
+                return;
+            }
+
+            console.log(`🗺️ Zeige ${data.length} Unfälle auf der Karte`); // Debug
+
+            showStatus(`Zeichne ${data.length.toLocaleString()} Unfälle...`, 'loading');
+
+            let severeCount = 0;
+            const cantons = new Set();
+            const heatmapData = [];
+            const useCluster = document.getElementById('clusterToggle').checked;
+
+            // Neuen Cluster erstellen falls aktiviert
+            if (useCluster) {
+                if (markerCluster) {
+                    map.removeLayer(markerCluster);
+                }
+                markerCluster = L.markerClusterGroup();
+            }
+
+            data.forEach(acc => {
+                let lat, lng;
+                
+                if (acc.location?.lat && acc.location?.lon) {
+                    lat = acc.location.lat;
+                    lng = acc.location.lon;
+                } else if (acc.accidentlocation_chlv95_e && acc.accidentlocation_chlv95_n) {
+                    const coords = convertLV95toWGS84(
+                        parseFloat(acc.accidentlocation_chlv95_e),
+                        parseFloat(acc.accidentlocation_chlv95_n)
+                    );
+                    lat = coords.lat;
+                    lng = coords.lng;
+                } else {
+                    return;
+                }
+
+                if (acc.accidentseveritycategory_de?.includes('Schwerverletzten')) {
+                    severeCount++;
+                }
+                
+                if (acc.cantoncode) cantons.add(acc.cantoncode);
+
+                heatmapData.push([lat, lng, 1]);
+
+                let color = '#16a34a';
+                if (acc.accidentseveritycategory_de?.includes('Schwerverletzten')) {
+                    color = '#dc2626';
+                } else if (acc.accidentseveritycategory_de?.includes('Leichtverletzten')) {
+                    color = '#ea580c';
+                }
+                
+                const marker = L.circleMarker([lat, lng], {
+                    radius: 5,
+                    color: 'white',
+                    fillColor: color,
+                    fillOpacity: 0.7,
+                    weight: 1
+                });
+
+                marker.bindPopup(createPopup(acc));
+
+                if (useCluster) {
+                    markerCluster.addLayer(marker);
+                } else {
+                    marker.addTo(map);
+                    currentMarkers.push(marker);
+                }
+            });
+
+            // Cluster zur Karte hinzufügen
+            if (useCluster && markerCluster) {
+                map.addLayer(markerCluster);
+            }
+
+            // Heatmap-Daten aktualisieren
+            window.heatmapData = heatmapData;
+            if (document.getElementById('heatmapToggle').checked) {
+                if (heatmapLayer) {
+                    map.removeLayer(heatmapLayer);
+                }
+                showHeatmap();
+            }
+
+            updateStats(data.length, severeCount, cantons.size);
+            showStatus(`✅ ${data.length.toLocaleString()} Unfälle angezeigt`, 'success');
+
+            // Zoom auf neue Bounds
+            if (useCluster && markerCluster.getLayers().length > 0) {
+                map.fitBounds(markerCluster.getBounds().pad(0.1));
+            } else if (currentMarkers.length > 0) {
+                const group = new L.featureGroup(currentMarkers);
+                map.fitBounds(group.getBounds().pad(0.1));
+            }
+        }
+
+        function convertLV95toWGS84(easting, northing) {
+            const lat = 46.8 + (northing - 1200000) / 100000;
+            const lng = 8.3 + (easting - 2600000) / 100000;
+            return { lat, lng };
+        }
+
+        function createPopup(acc) {
+            return `
+                <div style="min-width: 250px; padding: 10px;">
+                    <div style="font-size: 1.1em; font-weight: bold; color: #667eea; margin-bottom: 10px; border-bottom: 2px solid #667eea; padding-bottom: 5px;">
+                        Unfall ${acc.accidentyear || ''}
+                    </div>
+                    <div style="display: grid; grid-template-columns: auto 1fr; gap: 8px; font-size: 0.9em;">
+                        <strong>Kanton:</strong><span>${acc.cantoncode || '-'}</span>
+                        <strong>Gemeinde:</strong><span>${acc.gem_name || '-'}</span>
+                        <strong>Strasse:</strong><span>${acc.strassenname || '-'}</span>
+                        <strong>Schwere:</strong><span>${acc.accidentseveritycategory_de || '-'}</span>
+                        <strong>Typ:</strong><span>${acc.accidenttype_de || '-'}</span>
+                        <strong>Datum:</strong><span>${acc.accidentweekday_de || ''} ${acc.accidentmonth_de || ''}</span>
+                        <strong>Uhrzeit:</strong><span>${acc.accidenthour || '-'}:00</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        function updateStats(total, severe, cantons) {
+            if (document.getElementById('headerTotal')) {
+                document.getElementById('headerTotal').textContent = total.toLocaleString();
+            }
+            if (document.getElementById('headerSevere')) {
+                document.getElementById('headerSevere').textContent = severe.toLocaleString();
+            }
+            if (document.getElementById('headerCantons')) {
+                document.getElementById('headerCantons').textContent = cantons;
+            }
+
+            const quickStats = document.getElementById('quickStats');
+            quickStats.innerHTML = `
+                <div class="stat-box">
+                    <span class="value">${total.toLocaleString()}</span>
+                    <span class="label">Gefilterte Unfälle</span>
+                </div>
+                <div class="stat-box">
+                    <span class="value">${severe}</span>
+                    <span class="label">Schwerverletzt</span>
+                </div>
+                <div class="stat-box">
+                    <span class="value">${cantons}</span>
+                    <span class="label">Kantone</span>
+                </div>
+                <div class="stat-box">
+                    <span class="value">${((severe/total)*100).toFixed(1)}%</span>
+                    <span class="label">Schwere Quote</span>
+                </div>
+            `;
+        }
+
+        function updateCharts(data) {
+            // Gemeinde-Chart
+            const currentKanton = document.getElementById('kantonFilter').value;
+            let gemeindeCounts = {};
+            data.forEach(acc => {
+                if (acc.gem_name && (currentKanton === 'all' || acc.cantoncode === currentKanton)) {
+                    gemeindeCounts[acc.gem_name] = (gemeindeCounts[acc.gem_name] || 0) + 1;
+                }
+            });
+            
+            const sortedGemeinden = Object.entries(gemeindeCounts)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 10);
+            
+            gemeindeChart.data.labels = sortedGemeinden.map(([g]) => g);
+            gemeindeChart.data.datasets[0].data = sortedGemeinden.map(([, c]) => c);
+            gemeindeChart.update();
+
+            // Monat-Chart
+            const monthCounts = new Array(12).fill(0);
+            const monthNames = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
+            
+            data.forEach(acc => {
+                if (acc.accidentmonth_de) {
+                    const idx = monthNames.indexOf(acc.accidentmonth_de);
+                    if (idx !== -1) monthCounts[idx]++;
+                }
+            });
+            
+            monthChart.data.datasets[0].data = monthCounts;
+            monthChart.update();
+
+            // Zeit-Chart (24h)
+            const timeCounts = new Array(24).fill(0);
+            data.forEach(acc => {
+                if (acc.accidenthour !== undefined && acc.accidenthour !== null) {
+                    timeCounts[parseInt(acc.accidenthour)]++;
+                }
+            });
+            
+            timeChart.data.datasets[0].data = timeCounts;
+            timeChart.update();
+
+            // Typ-Chart
+            const typeCounts = {};
+            data.forEach(acc => {
+                if (acc.accidenttype_de) {
+                    typeCounts[acc.accidenttype_de] = (typeCounts[acc.accidenttype_de] || 0) + 1;
+                }
+            });
+            
+            const sortedTypes = Object.entries(typeCounts)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 5);
+            
+            typeChart.data.labels = sortedTypes.map(([t]) => t);
+            typeChart.data.datasets[0].data = sortedTypes.map(([, c]) => c);
+            typeChart.update();
+
+            // Road-Chart
+            const roadCounts = {};
+            data.forEach(acc => {
+                if (acc.roadtype_de) {
+                    roadCounts[acc.roadtype_de] = (roadCounts[acc.roadtype_de] || 0) + 1;
+                }
+            });
+            
+            const sortedRoads = Object.entries(roadCounts)
+                .sort((a, b) => b[1] - a[1])
+                .slice(0, 5);
+            
+            roadChart.data.labels = sortedRoads.map(([r]) => r);
+            roadChart.data.datasets[0].data = sortedRoads.map(([, c]) => c);
+            roadChart.update();
+
+            // Jahr-Trend-Chart
+            const yearCounts = {};
+            data.forEach(acc => {
+                if (acc.accidentyear) {
+                    yearCounts[acc.accidentyear] = (yearCounts[acc.accidentyear] || 0) + 1;
+                }
+            });
+            
+            const sortedYears = Object.entries(yearCounts).sort((a, b) => a[0] - b[0]);
+            
+            yearChart.data.labels = sortedYears.map(([y]) => y);
+            yearChart.data.datasets[0].data = sortedYears.map(([, c]) => c);
+            yearChart.update();
+        }
+
+        function resetFilters() {
+            document.getElementById('kantonFilter').value = 'all';
+            document.getElementById('gemeindeSearch').value = '';
+            document.getElementById('strasseSearch').value = '';
+            document.getElementById('jahrFilter').value = 'all';
+            document.getElementById('unfalltypFilter').value = 'all';
+            document.getElementById('schwereFilter').value = 'all';
+            document.getElementById('strasseFilter').value = 'all';
+            document.getElementById('monatFilter').value = 'all';
+            document.getElementById('wochentagFilter').value = 'all';
+            document.getElementById('uhrzeitFilter').value = 'all';
+            
+            if (allAccidentData.length > 0) {
+                displayData(allAccidentData);
+                updateCharts(allAccidentData);
+            }
+        }
+
+        function clearMap() {
+            currentMarkers.forEach(m => map.removeLayer(m));
+            currentMarkers = [];
+            
+            if (markerCluster) {
+                map.removeLayer(markerCluster);
+                markerCluster.clearLayers();
+            }
+
+            if (heatmapLayer) {
+                map.removeLayer(heatmapLayer);
+                heatmapLayer = null;
+            }
+        }
+
+        function toggleStreets() {
+            const isChecked = document.getElementById('streetsToggle').checked;
+            
+            if (isChecked) {
+                loadStreets();
+            } else {
+                if (streetLayer) {
+                    map.removeLayer(streetLayer);
+                    streetLayer = null;
+                }
+            }
+        }
+
+        function loadStreets() {
+            if (streetLayer) return;
+
+            showStatus('Lade Strassendaten...', 'loading');
+            
+            fetch('kanton_zuerich_strassen.geojson')
+                .then(response => response.json())
+                .then(data => {
+                    streetLayer = L.geoJSON(data, {
+                        style: {
+                            color: '#666',
+                            weight: 2,
+                            opacity: 0.5
+                        },
+                        onEachFeature: function(feature, layer) {
+                            if (feature.properties.name) {
+                                layer.bindPopup(`
+                                    <strong>Strasse:</strong> ${feature.properties.name}<br>
+                                    <strong>Länge:</strong> ${feature.properties.length_m} m
+                                `);
+                            }
+                        }
+                    }).addTo(map);
+                    
+                    showStatus('✅ Strassen geladen', 'success');
+                })
+                .catch(error => {
+                    showStatus('⚠️ Strassendaten nicht gefunden', 'error');
+                    document.getElementById('streetsToggle').checked = false;
+                });
+        }
+
+        function toggleHeatmap() {
+            const isChecked = document.getElementById('heatmapToggle').checked;
+            
+            if (isChecked) {
+                showHeatmap();
+            } else {
+                if (heatmapLayer) {
+                    map.removeLayer(heatmapLayer);
+                    heatmapLayer = null;
+                }
+            }
+        }
+
+        function showHeatmap() {
+            if (!window.heatmapData || window.heatmapData.length === 0) {
+                showStatus('⚠️ Keine Daten für Heatmap', 'error');
+                document.getElementById('heatmapToggle').checked = false;
+                return;
+            }
+
+            if (heatmapLayer) {
+                map.removeLayer(heatmapLayer);
+            }
+
+            heatmapLayer = L.heatLayer(window.heatmapData, {
+                radius: 25,
+                blur: 35,
+                maxZoom: 17,
+                gradient: {
+                    0.0: '#00ff00',
+                    0.5: '#ffff00',
+                    0.7: '#ff8800',
+                    1.0: '#ff0000'
+                }
+            }).addTo(map);
+        }
+
+        function exportCSV() {
+            if (filteredData.length === 0 && allAccidentData.length === 0) {
+                showStatus('⚠️ Keine Daten zum Exportieren', 'error');
+                return;
+            }
+
+            const data = filteredData.length > 0 ? filteredData : allAccidentData;
+            
+            const headers = ['Jahr', 'Kanton', 'Gemeinde', 'Strasse', 'Typ', 'Schwere', 'Monat', 'Wochentag', 'Uhrzeit'];
+            const rows = data.map(acc => [
+                acc.accidentyear || '',
+                acc.cantoncode || '',
+                acc.gem_name || '',
+                acc.strassenname || '',
+                acc.accidenttype_de || '',
+                acc.accidentseveritycategory_de || '',
+                acc.accidentmonth_de || '',
+                acc.accidentweekday_de || '',
+                acc.accidenthour || ''
+            ]);
+
+            let csv = headers.join(',') + '\n';
+            rows.forEach(row => {
+                csv += row.map(cell => `"${cell}"`).join(',') + '\n';
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `unfaelle_export_${new Date().toISOString().split('T')[0]}.csv`;
+            link.click();
+
+            showStatus(`✅ ${data.length} Datensätze exportiert`, 'success');
+        }
+
+        // Initialisierung
+        initCharts();
+        showStatus('👆 Laden Sie eine JSON-Datei mit Unfalldaten hoch', 'loading');
+    </script>
+</body>
+</html>

@@ -14,3 +14,15 @@ Das Projekt verwendet zwei Python-Skripte zur Datenaufbereitung:
 ```python
 # Bereinigt die Rohdaten und reduziert die Dateigröße
 python clean_data.py
+
+#### 2. **Datenfluss** 
+
+strassenverkehrsunfallorte.json
+         ↓
+clean_data.py
+         ↓
+strassenverkehrsunfallorte_cleaned.json  
+         ↓
+add_streetnames.py
+         ↓
+unfaelle_mit_strassen.json  ← Finale Datei für das Dashboard

@@ -13,7 +13,7 @@ python -m http.server 8000
 
 # Daten laden
 Im Dashboard auf "Daten importieren" klicken
-Datei unfaelle_mit_strassen.json auswählen
+Datei unfaelle_mit_strassen.json auswählen -->> Daten laden klicken <<--
 Daten werden automatisch verarbeitet und visualisiert
 
 

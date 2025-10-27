@@ -1,21 +1,39 @@
-# Zürcher Unfallanalytik - Erweitertes Dashboard
+# Zürcher Unfallanalytik - Dashboard
+# 📋 Projektbeschreibung
 
-## 📋 Projektbeschreibung
+# Interaktives Dashboard zur Visualisierung und Analyse von Verkehrsunfällen im Kanton Zürich mit erweiterten Filter- und Analysemöglichkeiten.
 
-Ein interaktives Web-Dashboard zur Visualisierung und Analyse von Unfalldaten **im Kanton Zürich**. Die Anwendung ermöglicht die Darstellung von Unfällen auf einer Karte, Filterung nach verschiedenen Kriterien und die Generierung von Statistiken und Diagrammen speziell für den Kanton Zürich.
 
-## 🗂️ Datenvorbereitung
+# 🚀 Schnellstart
 
-### Vorverarbeitung der Daten
 
-Das Projekt verwendet zwei Python-Skripte zur Datenaufbereitung:
+1. Datenvorbereitung
 
-#### 1. **Datenbereinigung** (`clean_data.py`)
-```python
-# Bereinigt die Rohdaten und reduziert die Dateigröße
+
+# Rohdaten bereinigen
 python clean_data.py
 
-#### 2. **Datenfluss** 
+# Strassennamen hinzufügen
+python add_streetnames.py
+2. Dashboard starten
+
+# Lokalen Server starten
+python -m http.server 8000
+
+# Im Browser öffnen: http://localhost:8000
+
+
+
+3. Daten laden
+
+Dashboard öffnen
+unfaelle_mit_strassen.json hochladen
+Daten werden automatisch visualisiert
+
+##########################################################################################
+
+
+# Datenfluss:
 
 strassenverkehrsunfallorte.json
          ↓
@@ -26,3 +44,34 @@ strassenverkehrsunfallorte_cleaned.json
 add_streetnames.py
          ↓
 unfaelle_mit_strassen.json  ← Finale Datei für das Dashboard
+
+##########################################################################################
+
+
+# 📁 Projektstruktur
+
+zuerich-accident-analytics/
+├── index.html                          # Haupt-Dashboard
+├── unfaelle_mit_strassen.json          # Finale Unfalldaten (generiert)
+├── clean_data.py                       # Datenbereinigung-Skript
+├── add_streetnames.py                  # Strassennamen-Skript
+├── SWISSTLM3D_2025.gpkg               # Schweizer Strassennetz (extern)
+└── README.md
+
+##########################################################################################
+
+
+# 🎯 Hauptfunktionen
+
+🗺️ Interaktive Karte mit Heatmap & Clustering
+📊 Echtzeit-Diagramme für Unfallanalysen
+🔍 Erweiterte Filterung nach Gemeinde, Strasse, Zeit, Unfalltyp
+💾 CSV-Export der gefilterten Daten
+⚙️ Technische Voraussetzungen
+
+##########################################################################################
+
+
+# Python Abhängigkeiten
+pip install geopandas pandas pyproj shapely
+Fertig! Das Dashboard läuft auf http://localhost:8000
